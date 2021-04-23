@@ -17,7 +17,7 @@ import {
   MuiPickersUtilsProvider,
 } from "@material-ui/pickers";
 import DateFnsUtils from "@date-io/date-fns"; // choose your lib
-import db, { auth, firebaseApp } from "../../FirebaseConfig/firebase";
+import db, { auth, firebaseApp, storage } from "../../FirebaseConfig/firebase";
 import { useHistory } from "react-router-dom";
 import firebase from "firebase";
 import "./inputFormList.css";
@@ -26,6 +26,7 @@ function InputFormList() {
   const [issueDate, setIssueDate] = useState(new Date());
   const [returnDate, setReturnDate] = useState(new Date());
   const [image, setImage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const history = useHistory();
 
   const [listValue, setListValue] = useState({
@@ -44,7 +45,6 @@ function InputFormList() {
   };
 
   const changeHandler = (event) => {
-    console.log(event.target.value);
     const { name, value } = event.target;
     setListValue({ ...listValue, [name]: value });
   };
@@ -54,40 +54,65 @@ function InputFormList() {
     // alert(listValue.title);
     // alert(listValue.status);
     // if (issueDate < returnDate) {
-    db.collection("list")
-      .doc(listValue.title)
-      .set({
-        title: listValue.title,
-        status: listValue.status,
-        issueDate: issueDate,
-        returnDate: returnDate,
-        imageUrl: image,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      })
-      .then(() => {
-        alert("Form Submitted Successfully");
-        history.push("/");
-      })
-      .catch(() => {
-        alert("form not submitted");
-      });
+
+    if (listValue.title && image && issueDate < returnDate) {
+      db.collection("list")
+        .doc(listValue.title)
+        .set({
+          title: listValue.title,
+          status: listValue.status,
+          issueDate: issueDate,
+          returnDate: returnDate,
+          imageUrl: imageUrl,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        })
+        .then(() => {
+          alert("Form Submitted Successfully");
+          history.push("/");
+        })
+        .catch(() => {
+          alert("form not submitted");
+        });
+    }
+
     // } else {
     // }
   };
 
   const imageHandler = (e) => {
-    let reader = new FileReader();
-    reader.onload = function (e) {
-      setImage(e.target.result);
-      console.log(e.target.result);
-    };
-    reader.readAsDataURL(e.target.files[0]);
+    // let reader = new FileReader();
+    // reader.onload = function (e) {
+    //   setImage(e.target.result);
+    //   console.log(e.target.result);
+    // };
+    // reader.readAsDataURL(e.target.files[0]);
 
-    // console.log(e.target.files[0]);
+    const imageFile1 = e.target.files[0];
+
+    setImage((imageFile) => imageFile1);
   };
 
   useEffect(() => {
-    console.log(image);
+    // console.log("Upload Image1", image);
+
+    if (image && listValue.title) {
+      // console.log("Upload Image2");
+      storage
+        .ref(`${listValue.title}/ ${image.name}`)
+        .put(image)
+        .then((snapshot) => {
+          console.log(snapshot);
+          snapshot.ref.getDownloadURL().then((url) => {
+            if (url) {
+              console.log(url);
+              setImageUrl(url);
+            }
+          });
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
   }, [image]);
 
   return (
